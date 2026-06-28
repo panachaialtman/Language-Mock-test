@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Language Mock Test Practice</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section id="home-screen" class="screen active">
+      <div class="card home-card">
+        <p id="home-eyebrow" class="eyebrow">Practice Tests</p>
+        <h1 id="home-title">Choose Test</h1>
+        <p id="home-lead" class="lead">Choose an exam to start practicing.</p>
+
+        <div id="exam-grid" class="exam-grid" aria-label="Choose an exam"></div>
+
+        <div id="exam-practice-area" class="hidden">
+          <div class="selected-exam-bar">
+            <div>
+              <span class="info-label">Selected Test</span>
+              <strong id="selected-exam-title">JLPT N5 Mock Test</strong>
+            </div>
+            <button id="change-exam-btn" class="button ghost-button" type="button">Change Test</button>
+          </div>
+
+          <div id="previous-summary" class="previous-summary hidden"></div>
+
+          <div id="mode-message" class="mode-message hidden"></div>
+          <div id="mode-grid" class="mode-grid" aria-label="Choose a test mode"></div>
+
+          <div class="button-row home-secondary-actions">
+            <button id="view-previous-btn" class="button secondary-button hidden" type="button">View Previous Result</button>
+            <button id="view-history-btn" class="button ghost-button" type="button">View Result History</button>
+          </div>
+
+          <p id="home-note" class="small-note">This is a practice test, not an official exam.</p>
+        </div>
+
+        <section class="saved-progress-panel" aria-labelledby="saved-progress-title">
+          <div>
+            <h2 id="saved-progress-title">Saved Progress</h2>
+            <p class="small-note">Progress is saved only in this browser.</p>
+          </div>
+          <div class="button-row saved-progress-actions">
+            <button id="export-progress-btn" class="button secondary-button" type="button">Export Progress</button>
+            <button id="import-progress-btn" class="button ghost-button" type="button">Import Progress</button>
+            <button id="clear-saved-progress-btn" class="button finish-button" type="button">Clear Saved Progress</button>
+          </div>
+          <input id="import-progress-input" class="import-progress-input" type="file" accept=".json,application/json">
+          <p id="saved-progress-message" class="small-note hidden"></p>
+        </section>
+
+        <details class="debug-panel">
+          <summary>Question bank tools</summary>
+          <button id="check-question-bank-btn" class="button ghost-button" type="button">Check Question Bank</button>
+          <div id="question-bank-report" class="debug-report"></div>
+        </details>
+      </div>
+
+      <footer class="site-footer">
+        <p>This is an unofficial practice site for study only. Progress is saved in this browser unless you export it.</p>
+      </footer>
+    </section>
+
+    <section id="instruction-screen" class="screen">
+      <div class="card">
+        <p class="eyebrow">Before You Start</p>
+        <h2 id="instruction-title">JLPT N5 Mock Test 1</h2>
+
+        <div class="info-grid">
+          <div>
+            <span class="info-label">Questions</span>
+            <strong id="instruction-count">40</strong>
+          </div>
+          <div>
+            <span class="info-label">Time Limit</span>
+            <strong id="instruction-time">60 minutes</strong>
+          </div>
+        </div>
+
+        <div id="instruction-warning" class="instruction-warning hidden"></div>
+
+        <h3>Sections Included</h3>
+        <ul id="section-list" class="section-list"></ul>
+
+        <div class="button-row">
+          <button id="begin-test-btn" class="button primary-button" type="button">Begin Test</button>
+          <button id="instruction-home-btn" class="button ghost-button" type="button">Back to Home</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="test-screen" class="screen">
+      <div class="test-layout">
+        <div class="test-card">
+          <div class="test-topbar">
+            <div>
+              <span id="question-counter" class="question-counter">Question 1 / 40</span>
+              <span id="section-badge" class="section-badge">Vocabulary</span>
+            </div>
+            <div id="timer" class="timer">60:00</div>
+          </div>
+
+          <div class="progress-track" aria-label="Test progress">
+            <div id="progress-bar" class="progress-bar"></div>
+          </div>
+
+          <article class="question-panel">
+            <p id="question-type" class="question-type">Meaning</p>
+            <div id="passage-box" class="passage-box hidden"></div>
+            <h2 id="question-text" class="question-text"></h2>
+            <div id="options-list" class="options-list"></div>
+          </article>
+
+          <div class="test-actions">
+            <button id="previous-question-btn" class="button secondary-button" type="button">Previous</button>
+            <button id="next-question-btn" class="button primary-button" type="button">Next</button>
+            <button id="submit-test-btn" class="button finish-button hidden" type="button">Submit</button>
+          </div>
+        </div>
+
+        <aside class="question-map" aria-label="Question list">
+          <h3>Question List</h3>
+          <div id="question-jump-list" class="question-jump-list"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="result-screen" class="screen">
+      <div class="card">
+        <p class="eyebrow">Your Result</p>
+        <h2 id="result-title">JLPT N5 Mock Test 1</h2>
+        <p id="result-date" class="small-note"></p>
+
+        <div class="score-panel">
+          <div>
+            <span class="info-label">Score</span>
+            <strong id="score-text">0 / 40</strong>
+          </div>
+          <div>
+            <span class="info-label">Percentage</span>
+            <strong id="percentage-text">0%</strong>
+          </div>
+        </div>
+
+        <p id="result-message" class="result-message">Keep practicing</p>
+        <p id="result-score-note" class="result-score-note"></p>
+
+        <h3>Section Score Breakdown</h3>
+        <div id="section-breakdown" class="breakdown-list"></div>
+
+        <section id="weak-point-analysis" class="weak-point-analysis" aria-label="Weak point analysis"></section>
+
+        <div class="button-row">
+          <button id="review-answers-btn" class="button primary-button" type="button">Review Answers</button>
+          <button id="retake-test-btn" class="button secondary-button" type="button">Retake Test</button>
+          <button id="result-home-btn" class="button ghost-button" type="button">Back to Home</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="review-screen" class="screen">
+      <div class="review-header">
+        <div>
+          <p class="eyebrow">Answer Review</p>
+          <h2>Review Answers</h2>
+        </div>
+        <button id="review-result-btn" class="button secondary-button" type="button">Back to Result</button>
+      </div>
+      <div id="review-filters" class="review-filters" aria-label="Review filters"></div>
+      <div id="review-list" class="review-list"></div>
+    </section>
+
+    <section id="history-screen" class="screen">
+      <div class="card history-card">
+        <p class="eyebrow">Progress</p>
+        <h2>Result History</h2>
+        <div id="history-list" class="history-list"></div>
+        <div class="button-row">
+          <button id="clear-history-btn" class="button finish-button" type="button">Clear History</button>
+          <button id="history-home-btn" class="button ghost-button" type="button">Back to Home</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="questions.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
