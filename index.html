@@ -111,6 +111,23 @@
             <p id="question-type" class="question-type">Meaning</p>
             <div id="passage-box" class="passage-box hidden"></div>
             <h2 id="question-text" class="question-text"></h2>
+            <div class="translation-help">
+              <div class="translation-help-topbar">
+                <span id="translation-help-counter" class="translation-help-counter">Translation Help: 3 left</span>
+                <div class="translation-help-actions">
+                  <button id="translate-question-btn" class="button ghost-button translation-button" type="button">Translate Question</button>
+                  <button id="translate-answer-btn" class="button ghost-button translation-button" type="button">Translate Answer</button>
+                </div>
+              </div>
+              <p id="translation-limit-message" class="translation-limit-message hidden">You have used all translation help for this test.</p>
+              <div id="translation-box" class="translation-box hidden" aria-live="polite">
+                <div class="translation-box-topbar">
+                  <strong id="translation-box-title">Translation</strong>
+                  <button id="close-translation-btn" class="translation-close-button" type="button">Close</button>
+                </div>
+                <div id="translation-box-content" class="translation-box-content"></div>
+              </div>
+            </div>
             <div id="options-list" class="options-list"></div>
           </article>
 

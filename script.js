@@ -15,6 +15,8 @@ const LEGACY_STORAGE_KEYS = {
 };
 const HISTORY_LIMIT = 50;
 const RECENT_QUESTION_LIMIT = 100;
+const TRANSLATION_HELP_LIMIT = 3;
+const TRANSLATION_UNAVAILABLE_MESSAGE = "Translation is not available for this question yet.";
 const OPTION_LETTERS = ["A", "B", "C", "D"];
 const DEFAULT_EXAM_ID = "jlpt-n5";
 const ALLOWED_EXAMS = ["JLPT", "HSK"];
@@ -177,6 +179,8 @@ const state = {
   remainingSeconds: 0,
   timerId: null,
   activeResult: null,
+  translationHelpRemaining: TRANSLATION_HELP_LIMIT,
+  activeTranslation: null,
   questionBankValidation: null
 };
 
@@ -217,6 +221,14 @@ const elements = {
   questionType: document.getElementById("question-type"),
   passageBox: document.getElementById("passage-box"),
   questionText: document.getElementById("question-text"),
+  translationHelpCounter: document.getElementById("translation-help-counter"),
+  translateQuestionBtn: document.getElementById("translate-question-btn"),
+  translateAnswerBtn: document.getElementById("translate-answer-btn"),
+  translationLimitMessage: document.getElementById("translation-limit-message"),
+  translationBox: document.getElementById("translation-box"),
+  translationBoxTitle: document.getElementById("translation-box-title"),
+  translationBoxContent: document.getElementById("translation-box-content"),
+  closeTranslationBtn: document.getElementById("close-translation-btn"),
   optionsList: document.getElementById("options-list"),
   previousQuestionBtn: document.getElementById("previous-question-btn"),
   nextQuestionBtn: document.getElementById("next-question-btn"),
@@ -263,6 +275,9 @@ function initApp() {
   elements.beginTestBtn.addEventListener("click", beginTest);
   elements.previousQuestionBtn.addEventListener("click", goToPreviousQuestion);
   elements.nextQuestionBtn.addEventListener("click", goToNextQuestion);
+  elements.translateQuestionBtn.addEventListener("click", showQuestionTranslation);
+  elements.translateAnswerBtn.addEventListener("click", showAnswerTranslations);
+  elements.closeTranslationBtn.addEventListener("click", closeTranslationBox);
   elements.submitTestBtn.addEventListener("click", submitWithConfirmation);
   elements.reviewAnswersBtn.addEventListener("click", showReview);
   elements.retakeTestBtn.addEventListener("click", () => showInstructions(state.selectedMode?.id || getCurrentExamConfig().defaultModeId));
@@ -829,9 +844,12 @@ function makeSessionQuestion(question, options = {}) {
     level: question.level,
     type: question.type,
     question: question.question,
+    questionTranslation: question.questionTranslation || "",
     passage: question.passage,
+    passageTranslation: question.passageTranslation || "",
     pinyin: question.pinyin || "",
     options: [...question.options],
+    optionTranslations: getOptionTranslations(question),
     correctIndex: question.correctIndex,
     explanation: question.explanation,
     difficulty: question.difficulty || "normal",
@@ -869,6 +887,7 @@ function shuffleQuestionOptions(question) {
   const shuffledOptions = shuffleArray(
     question.options.map((option, index) => ({
       option,
+      optionTranslation: question.optionTranslations?.[index] || "",
       isCorrect: index === question.correctIndex
     }))
   );
@@ -876,8 +895,17 @@ function shuffleQuestionOptions(question) {
   return {
     ...question,
     options: shuffledOptions.map((item) => item.option),
+    optionTranslations: shuffledOptions.map((item) => item.optionTranslation),
     correctIndex: shuffledOptions.findIndex((item) => item.isCorrect)
   };
+}
+
+function getOptionTranslations(question) {
+  return question.options.map((option, index) =>
+    Array.isArray(question.optionTranslations) && typeof question.optionTranslations[index] === "string"
+      ? question.optionTranslations[index]
+      : ""
+  );
 }
 
 function shuffleArray(items) {
@@ -895,6 +923,8 @@ function beginTest() {
   state.answers = new Array(state.questions.length).fill(null);
   state.currentIndex = 0;
   state.remainingSeconds = state.selectedTest.timeLimitMinutes * 60;
+  state.translationHelpRemaining = TRANSLATION_HELP_LIMIT;
+  state.activeTranslation = null;
 
   rememberRecentlyUsedQuestions(state.questions.map((question) => question.id));
   renderQuestion();
@@ -964,6 +994,8 @@ function renderQuestion() {
     elements.passageBox.classList.add("hidden");
   }
 
+  renderTranslationHelp();
+
   elements.optionsList.innerHTML = "";
   question.options.forEach((option, index) => {
     const button = document.createElement("button");
@@ -989,6 +1021,139 @@ function renderQuestion() {
   renderQuestionJumpList();
 }
 
+function renderTranslationHelp() {
+  const remaining = Math.max(0, state.translationHelpRemaining);
+  const isDepleted = remaining <= 0;
+  const activeTranslation = state.activeTranslation;
+
+  elements.translationHelpCounter.textContent = `Translation Help: ${remaining} left`;
+  elements.translateQuestionBtn.disabled = isDepleted;
+  elements.translateAnswerBtn.disabled = isDepleted;
+  elements.translationLimitMessage.classList.toggle("hidden", !isDepleted);
+
+  if (activeTranslation && activeTranslation.questionIndex === state.currentIndex) {
+    elements.translationBoxTitle.textContent = activeTranslation.title;
+    elements.translationBoxContent.innerHTML = activeTranslation.contentHtml;
+    elements.translationBox.classList.remove("hidden");
+  } else {
+    elements.translationBoxTitle.textContent = "Translation";
+    elements.translationBoxContent.innerHTML = "";
+    elements.translationBox.classList.add("hidden");
+  }
+}
+
+function showQuestionTranslation() {
+  const question = state.questions[state.currentIndex];
+  const contentHtml = buildQuestionTranslationHtml(question);
+
+  if (!contentHtml) {
+    showTranslationFallback();
+    return;
+  }
+
+  showTranslationContent("Question Translation", contentHtml);
+}
+
+function showAnswerTranslations() {
+  const question = state.questions[state.currentIndex];
+  const contentHtml = buildAnswerTranslationsHtml(question);
+
+  if (!contentHtml) {
+    showTranslationFallback();
+    return;
+  }
+
+  showTranslationContent("Answer Translations", contentHtml);
+}
+
+function showTranslationContent(title, contentHtml) {
+  if (!spendTranslationHelp()) {
+    renderTranslationHelp();
+    return;
+  }
+
+  state.activeTranslation = {
+    questionIndex: state.currentIndex,
+    title,
+    contentHtml
+  };
+  renderTranslationHelp();
+}
+
+function spendTranslationHelp() {
+  if (state.translationHelpRemaining <= 0) {
+    return false;
+  }
+
+  state.translationHelpRemaining -= 1;
+  return true;
+}
+
+function showTranslationFallback() {
+  state.activeTranslation = {
+    questionIndex: state.currentIndex,
+    title: "Translation",
+    contentHtml: `<p class="translation-text">${escapeHtml(TRANSLATION_UNAVAILABLE_MESSAGE)}</p>`
+  };
+  renderTranslationHelp();
+}
+
+function buildQuestionTranslationHtml(question) {
+  const sections = [];
+
+  if (hasTranslationText(question.questionTranslation)) {
+    sections.push(formatTranslationSection("Question Translation:", question.questionTranslation));
+  }
+
+  if (hasTranslationText(question.passageTranslation)) {
+    sections.push(formatTranslationSection("Passage Translation:", question.passageTranslation));
+  }
+
+  return sections.length > 0 ? sections.join("") : "";
+}
+
+function buildAnswerTranslationsHtml(question) {
+  const optionTranslations = getOptionTranslations(question);
+
+  if (optionTranslations.length !== OPTION_LETTERS.length || optionTranslations.some((translation) => !hasTranslationText(translation))) {
+    return "";
+  }
+
+  const rows = optionTranslations
+    .map((translation, index) => `
+      <li>
+        <strong>${OPTION_LETTERS[index]}.</strong>
+        <span>${escapeHtml(translation)}</span>
+      </li>
+    `)
+    .join("");
+
+  return `
+    <div class="translation-section">
+      <strong>Answer Translations:</strong>
+      <ul class="translation-option-list">${rows}</ul>
+    </div>
+  `;
+}
+
+function formatTranslationSection(title, text) {
+  return `
+    <div class="translation-section">
+      <strong>${title}</strong>
+      <p class="translation-text">${escapeHtml(text)}</p>
+    </div>
+  `;
+}
+
+function hasTranslationText(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function closeTranslationBox() {
+  state.activeTranslation = null;
+  renderTranslationHelp();
+}
+
 function renderQuestionJumpList() {
   elements.questionJumpList.innerHTML = "";
 
@@ -1008,13 +1173,20 @@ function renderQuestionJumpList() {
       button.classList.add("unanswered");
     }
 
-    button.addEventListener("click", () => {
-      state.currentIndex = index;
-      renderQuestion();
-    });
+    button.addEventListener("click", () => moveToQuestion(index));
 
     elements.questionJumpList.appendChild(button);
   });
+}
+
+function moveToQuestion(questionIndex) {
+  if (questionIndex === state.currentIndex) {
+    return;
+  }
+
+  state.currentIndex = questionIndex;
+  state.activeTranslation = null;
+  renderQuestion();
 }
 
 function selectAnswer(optionIndex) {
@@ -1024,15 +1196,13 @@ function selectAnswer(optionIndex) {
 
 function goToPreviousQuestion() {
   if (state.currentIndex > 0) {
-    state.currentIndex -= 1;
-    renderQuestion();
+    moveToQuestion(state.currentIndex - 1);
   }
 }
 
 function goToNextQuestion() {
   if (state.currentIndex < state.questions.length - 1) {
-    state.currentIndex += 1;
-    renderQuestion();
+    moveToQuestion(state.currentIndex + 1);
   }
 }
 
@@ -1739,12 +1909,16 @@ function rememberRecentlyUsedQuestions(questionIds) {
 function loadRecentQuestionIds() {
   const recentQuestionIds = loadJson(STORAGE_KEYS.recentQuestions, []);
   return Array.isArray(recentQuestionIds)
-    ? recentQuestionIds.filter((questionId) => typeof questionId === "string")
+    ? Array.from(new Set(recentQuestionIds.filter((questionId) => typeof questionId === "string")))
+      .slice(0, RECENT_QUESTION_LIMIT)
     : [];
 }
 
 function saveRecentQuestionIds(questionIds) {
-  saveJson(STORAGE_KEYS.recentQuestions, questionIds);
+  const limitedQuestionIds = Array.from(new Set(
+    questionIds.filter((questionId) => typeof questionId === "string")
+  )).slice(0, RECENT_QUESTION_LIMIT);
+  saveJson(STORAGE_KEYS.recentQuestions, limitedQuestionIds);
 }
 
 function buildQuestionsFromSnapshots(questionSnapshots) {
@@ -1757,9 +1931,12 @@ function buildQuestionsFromSnapshots(questionSnapshots) {
     sectionTitle: question.sectionTitle || getSectionTitle(question.sectionId || question.section, getQuestionExamId(question)),
     type: question.type,
     question: question.question,
+    questionTranslation: question.questionTranslation || "",
     passage: question.passage,
+    passageTranslation: question.passageTranslation || "",
     pinyin: question.pinyin || "",
     options: [...question.options],
+    optionTranslations: getOptionTranslations(question),
     correctIndex: question.correctIndex,
     explanation: question.explanation,
     difficulty: question.difficulty || "normal",
@@ -1812,9 +1989,12 @@ function toSavedSectionQuestion(question) {
     level: question.level || "N5",
     type: question.type,
     question: question.question,
+    questionTranslation: question.questionTranslation || "",
     passage: question.passage,
+    passageTranslation: question.passageTranslation || "",
     pinyin: question.pinyin || "",
     options: question.options,
+    optionTranslations: getOptionTranslations(question),
     correctIndex: question.correctIndex,
     explanation: question.explanation,
     difficulty: question.difficulty || "normal",
@@ -1898,9 +2078,12 @@ function toQuestionSnapshot(question) {
     sectionTitle: question.sectionTitle,
     type: question.type,
     question: question.question,
+    questionTranslation: question.questionTranslation || "",
     passage: question.passage,
+    passageTranslation: question.passageTranslation || "",
     pinyin: question.pinyin || "",
     options: [...question.options],
+    optionTranslations: getOptionTranslations(question),
     correctIndex: question.correctIndex,
     explanation: question.explanation,
     difficulty: question.difficulty || "normal",
@@ -1949,9 +2132,12 @@ function toStoredQuestion(question) {
     sectionTitle: question.sectionTitle,
     type: question.type,
     question: question.question,
+    questionTranslation: question.questionTranslation || "",
     passage: question.passage,
+    passageTranslation: question.passageTranslation || "",
     pinyin: question.pinyin || "",
     options: question.options,
+    optionTranslations: getOptionTranslations(question),
     correctIndex: question.correctIndex,
     explanation: question.explanation,
     difficulty: question.difficulty || "normal",

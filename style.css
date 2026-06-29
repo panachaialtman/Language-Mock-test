@@ -532,6 +532,94 @@ h3 {
   font-size: clamp(1.25rem, 3vw, 1.65rem);
 }
 
+.translation-help {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.translation-help-topbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.translation-help-counter {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.translation-help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.translation-button {
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.translation-limit-message {
+  margin: 0;
+  color: var(--red);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.translation-box {
+  padding: 14px;
+  background: #fbfdff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.translation-box-topbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.translation-close-button {
+  min-height: 34px;
+  padding: 6px 10px;
+  color: var(--muted);
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.translation-section + .translation-section {
+  margin-top: 12px;
+}
+
+.translation-section strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--primary-dark);
+}
+
+.translation-text,
+.translation-option-list {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.translation-option-list {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
 .options-list {
   display: grid;
   gap: 12px;
@@ -966,6 +1054,7 @@ h3 {
   }
 
   .test-topbar,
+  .translation-help-topbar,
   .selected-exam-bar,
   .review-header,
   .history-item,
@@ -989,6 +1078,14 @@ h3 {
 
   .button {
     width: 100%;
+  }
+
+  .translation-help-actions {
+    justify-content: stretch;
+  }
+
+  .translation-button {
+    flex: 1 1 100%;
   }
 
   .filter-button {
