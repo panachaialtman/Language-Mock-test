@@ -1,19 +1,23 @@
 # Language Mock Test Practice
 
-A simple static practice website for JLPT N5 and HSK 4 mock tests.
+A simple static practice website for JLPT N5, JLPT N4, and HSK 4 mock tests.
 
 The site uses only HTML, CSS, and JavaScript. There is no backend, database, login, build step, or package install.
 
 ## Current Features
 
-- JLPT N5 and HSK 4 practice modes
+- JLPT N5, JLPT N4, and HSK 4 exam choices
 - Full tests, mini tests, section practice, and wrong answer review
 - Random question selection with recent-question tracking
 - Answer option shuffling
 - Result history and wrong answer saving in the browser
+- Weak-point analysis after each test
+- Question and answer translation help with limited uses per test
 - Export and import saved progress as a JSON file
 - Question bank validation tools
 - Mobile-friendly layout
+
+JLPT N4 system support is available, and the JLPT N4 question bank currently includes vocabulary, kanji, grammar, reading, and listening-style practice.
 
 ## Files
 
@@ -61,15 +65,16 @@ Importing progress replaces the current saved progress in that browser.
 
 ## Question Bank Counts
 
-Current total: 290 questions.
+Current total: 905 questions.
 
-- JLPT N5: 240
-- HSK 4: 50
-- Vocabulary: 90
-- Grammar: 90
-- Reading: 50
-- Listening-style: 50
-- Writing: 10
+- JLPT N5: 330
+- JLPT N4: 180
+- HSK 4: 395
+- Vocabulary: 255
+- Grammar: 255
+- Reading: 145
+- Listening-style: 170
+- Writing: 80
 
 ## Adding More Questions
 
@@ -86,15 +91,26 @@ Each question should have:
 - `difficulty`
 - `question`
 - `passage`
+- `questionTranslation`
+- `passageTranslation`
 - `options`
+- `optionTranslations`
 - `correctIndex`
 - `explanation`
 - `tags`
 
 Each question must have exactly 4 options, and `correctIndex` must be `0`, `1`, `2`, or `3`.
 
+Use these exam metadata values:
+
+- JLPT N5: `exam: "JLPT"`, `language: "ja"`, `level: "N5"`
+- JLPT N4: `exam: "JLPT"`, `language: "ja"`, `level: "N4"`
+- HSK 4: `exam: "HSK"`, `language: "zh"`, `level: "HSK4"`
+
+For Chinese questions, add `pinyin` when useful. For Japanese questions, `pinyin` can be an empty string.
+
 After adding questions, open the site and click **Question bank tools** then **Check Question Bank**. The browser console also prints a validation report when the page loads.
 
 ## Public Note
 
-This is an unofficial study tool. It is not an official JLPT or HSK exam product.
+This is an independent practice website. It is not an official JLPT or HSK test.

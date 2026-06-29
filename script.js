@@ -21,6 +21,8 @@ const OPTION_LETTERS = ["A", "B", "C", "D"];
 const DEFAULT_EXAM_ID = "jlpt-n5";
 const ALLOWED_EXAMS = ["JLPT", "HSK"];
 const ALLOWED_LANGUAGES = ["ja", "zh"];
+const ALLOWED_JLPT_LEVELS = ["N5", "N4"];
+const ALLOWED_HSK_LEVELS = ["HSK4"];
 const ALLOWED_QUESTION_SECTIONS = ["vocabulary", "grammar", "reading", "listening", "writing"];
 const ALLOWED_DIFFICULTIES = ["easy", "normal", "hard"];
 const EXAM_CONFIGS = [
@@ -34,6 +36,24 @@ const EXAM_CONFIGS = [
     description: "Practice Japanese vocabulary, grammar, reading, and listening-style questions.",
     note: "This is a practice test, not an official JLPT test.",
     defaultModeId: "full",
+    sections: [
+      { id: "vocabulary", title: "Vocabulary" },
+      { id: "grammar", title: "Grammar" },
+      { id: "reading", title: "Reading" },
+      { id: "listening", title: "Listening-style Practice" }
+    ]
+  },
+  {
+    id: "jlpt-n4",
+    exam: "JLPT",
+    language: "ja",
+    level: "N4",
+    title: "JLPT N4 Mock Test",
+    shortTitle: "JLPT N4",
+    description: "Practice Japanese N4 vocabulary, grammar, reading, and listening-style questions.",
+    note: "This is a practice score, not an official JLPT scaled score.",
+    emptyBankMessage: "The JLPT N4 question bank has not been fully added yet.",
+    defaultModeId: "n4-mini",
     sections: [
       { id: "vocabulary", title: "Vocabulary" },
       { id: "grammar", title: "Grammar" },
@@ -108,6 +128,64 @@ const TEST_MODES_BY_EXAM = {
       id: "wrong-review",
       title: "Wrong Answer Review",
       description: "Retake questions you missed before.",
+      timeLimitMinutes: 20,
+      sections: {},
+      isWrongReview: true
+    }
+  ],
+  "jlpt-n4": [
+    {
+      id: "n4-full",
+      title: "Full JLPT N4 Mock Test",
+      description: "Mixed N4 vocabulary, grammar, reading, and listening-style practice.",
+      timeLimitMinutes: 70,
+      sections: { vocabulary: 10, grammar: 10, reading: 10, listening: 10 },
+      smallBankWarning: "The JLPT N4 question bank has not been fully added yet."
+    },
+    {
+      id: "n4-mini",
+      title: "Mini JLPT N4 Test",
+      description: "A shorter mixed N4 test for quick practice.",
+      timeLimitMinutes: 30,
+      sections: { vocabulary: 5, grammar: 5, reading: 5, listening: 5 },
+      smallBankWarning: "The JLPT N4 question bank has not been fully added yet."
+    },
+    {
+      id: "n4-vocabulary",
+      title: "N4 Vocabulary Practice",
+      description: "N4 word meanings, readings, kanji readings, and word usage.",
+      timeLimitMinutes: 20,
+      sections: { vocabulary: 20 },
+      smallBankWarning: "The JLPT N4 question bank has not been fully added yet."
+    },
+    {
+      id: "n4-grammar",
+      title: "N4 Grammar Practice",
+      description: "N4 particles, sentence patterns, verb forms, and sentence order.",
+      timeLimitMinutes: 25,
+      sections: { grammar: 20 },
+      smallBankWarning: "The JLPT N4 question bank has not been fully added yet."
+    },
+    {
+      id: "n4-reading",
+      title: "N4 Reading Practice",
+      description: "Short N4-level passages with comprehension questions.",
+      timeLimitMinutes: 30,
+      sections: { reading: 10 },
+      smallBankWarning: "The JLPT N4 question bank has not been fully added yet."
+    },
+    {
+      id: "n4-listening",
+      title: "N4 Listening-style Practice",
+      description: "Script-based N4 conversation practice. No real audio is included.",
+      timeLimitMinutes: 25,
+      sections: { listening: 10 },
+      smallBankWarning: "The JLPT N4 question bank has not been fully added yet."
+    },
+    {
+      id: "n4-wrong-review",
+      title: "N4 Wrong Answer Review",
+      description: "Retake JLPT N4 questions you missed before.",
       timeLimitMinutes: 20,
       sections: {},
       isWrongReview: true
@@ -332,7 +410,7 @@ function normalizeQuestionDefaults(question) {
     question.tags = [];
   }
 
-  if (question.language === "zh" && !Object.prototype.hasOwnProperty.call(question, "pinyin")) {
+  if (!Object.prototype.hasOwnProperty.call(question, "pinyin")) {
     question.pinyin = "";
   }
 
@@ -347,6 +425,7 @@ function validateQuestionBank(bank = questionBank) {
   }, {});
   const countsByExam = {};
   const countsByLevel = {};
+  const countsByType = {};
   const seenIds = new Set();
   const errors = [];
   const warnings = [];
@@ -388,11 +467,11 @@ function validateQuestionBank(bank = questionBank) {
       errors.push(`${label}: language must be ja or zh.`);
     }
 
-    if (question.exam === "JLPT" && (question.language !== "ja" || question.level !== "N5")) {
-      errors.push(`${label}: JLPT questions must use language ja and level N5.`);
+    if (question.exam === "JLPT" && (question.language !== "ja" || !ALLOWED_JLPT_LEVELS.includes(question.level))) {
+      errors.push(`${label}: JLPT questions must use language ja and level N5 or N4.`);
     }
 
-    if (question.exam === "HSK" && (question.language !== "zh" || question.level !== "HSK4")) {
+    if (question.exam === "HSK" && (question.language !== "zh" || !ALLOWED_HSK_LEVELS.includes(question.level))) {
       errors.push(`${label}: HSK questions must use language zh and level HSK4.`);
     }
 
@@ -404,6 +483,8 @@ function validateQuestionBank(bank = questionBank) {
 
     if (typeof question.type !== "string" || !question.type.trim()) {
       errors.push(`${label}: type must be a non-empty string.`);
+    } else {
+      countsByType[question.type] = (countsByType[question.type] || 0) + 1;
     }
 
     if (typeof question.question !== "string" || !question.question.trim()) {
@@ -423,6 +504,7 @@ function validateQuestionBank(bank = questionBank) {
     }
 
     validateQuestionOptions(question, label, errors);
+    validateQuestionTranslations(question, label, warnings);
     validateQuestionPassage(question, label, warnings);
     validateQuestionDifficulty(question, label, errors);
   });
@@ -432,7 +514,9 @@ function validateQuestionBank(bank = questionBank) {
     counts,
     countsByExam,
     countsByLevel,
+    countsByType,
     jlptN5Total: bank.filter((question) => question?.exam === "JLPT" && question?.level === "N5").length,
+    jlptN4Total: bank.filter((question) => question?.exam === "JLPT" && question?.level === "N4").length,
     hsk4Total: bank.filter((question) => question?.exam === "HSK" && question?.level === "HSK4").length,
     errors,
     warnings
@@ -460,6 +544,35 @@ function validateQuestionOptions(question, label, errors) {
   }
 }
 
+function validateQuestionTranslations(question, label, warnings) {
+  if (question.questionTranslation !== undefined && typeof question.questionTranslation !== "string") {
+    warnings.push(`${label}: questionTranslation should be a string if provided.`);
+  }
+
+  if (question.passageTranslation !== undefined && typeof question.passageTranslation !== "string") {
+    warnings.push(`${label}: passageTranslation should be a string if provided.`);
+  }
+
+  if (question.optionTranslations === undefined) {
+    return;
+  }
+
+  if (!Array.isArray(question.optionTranslations)) {
+    warnings.push(`${label}: optionTranslations should be an array if provided.`);
+    return;
+  }
+
+  if (question.optionTranslations.length !== 4) {
+    warnings.push(`${label}: optionTranslations should contain exactly 4 strings when provided.`);
+  }
+
+  question.optionTranslations.forEach((translation, optionIndex) => {
+    if (typeof translation !== "string") {
+      warnings.push(`${label}: option translation ${optionIndex + 1} should be a string.`);
+    }
+  });
+}
+
 function validateQuestionPassage(question, label, warnings) {
   if (question.passage !== undefined && typeof question.passage !== "string") {
     warnings.push(`${label}: passage should be a string if provided.`);
@@ -485,10 +598,12 @@ function logQuestionBankValidation(report) {
   console.group("Question Bank Validation:");
   console.log(`Total questions: ${report.total}`);
   console.log(`JLPT N5 questions: ${report.jlptN5Total}`);
+  console.log(`JLPT N4 questions: ${report.jlptN4Total}`);
   console.log(`HSK 4 questions: ${report.hsk4Total}`);
   console.log("Counts by exam:", report.countsByExam);
   console.log("Counts by level:", report.countsByLevel);
   console.log("Counts by section:", report.counts);
+  console.log("Counts by type:", report.countsByType);
   console.log(`Vocabulary: ${report.counts.vocabulary}`);
   console.log(`Grammar: ${report.counts.grammar}`);
   console.log(`Reading: ${report.counts.reading}`);
@@ -517,13 +632,16 @@ function showQuestionBankReport() {
 function formatQuestionBankReport(report) {
   const examCounts = formatCountMap(report.countsByExam);
   const levelCounts = formatCountMap(report.countsByLevel);
+  const typeCounts = formatCountMap(report.countsByType);
   const summary = `
     <div class="debug-summary">
       <strong>Total questions: ${report.total}</strong>
       <span>JLPT N5: ${report.jlptN5Total}</span>
+      <span>JLPT N4: ${report.jlptN4Total}</span>
       <span>HSK 4: ${report.hsk4Total}</span>
       <span>By exam: ${escapeHtml(examCounts)}</span>
       <span>By level: ${escapeHtml(levelCounts)}</span>
+      <span>By type: ${escapeHtml(typeCounts)}</span>
       <span>Vocabulary: ${report.counts.vocabulary}</span>
       <span>Grammar: ${report.counts.grammar}</span>
       <span>Reading: ${report.counts.reading}</span>
@@ -564,17 +682,44 @@ function formatValidationMessages(title, messages) {
 function renderExamCards() {
   elements.examGrid.innerHTML = "";
 
-  EXAM_CONFIGS.forEach((examConfig) => {
-    const button = document.createElement("button");
-    button.className = "exam-card";
-    button.type = "button";
-    button.innerHTML = `
-      <span class="mode-title">${escapeHtml(examConfig.title)}</span>
-      <span class="mode-description">${escapeHtml(examConfig.description)}</span>
-      <span class="mode-meta">${escapeHtml(examConfig.exam)} ${escapeHtml(examConfig.level)}</span>
-    `;
-    button.addEventListener("click", () => handleExamSelection(examConfig.id));
-    elements.examGrid.appendChild(button);
+  const examGroups = EXAM_CONFIGS.reduce((groups, examConfig) => {
+    let group = groups.find((item) => item.exam === examConfig.exam);
+
+    if (!group) {
+      group = {
+        exam: examConfig.exam,
+        exams: []
+      };
+      groups.push(group);
+    }
+
+    group.exams.push(examConfig);
+    return groups;
+  }, []);
+
+  examGroups.forEach((group) => {
+    const groupElement = document.createElement("section");
+    groupElement.className = "exam-group";
+    groupElement.innerHTML = `<h2 class="exam-group-title">${escapeHtml(group.exam)}</h2>`;
+
+    const groupGrid = document.createElement("div");
+    groupGrid.className = "exam-group-grid";
+
+    group.exams.forEach((examConfig) => {
+      const button = document.createElement("button");
+      button.className = "exam-card";
+      button.type = "button";
+      button.innerHTML = `
+        <span class="mode-title">${escapeHtml(examConfig.shortTitle)}</span>
+        <span class="mode-description">${escapeHtml(examConfig.description)}</span>
+        <span class="mode-meta">${escapeHtml(examConfig.exam)} ${escapeHtml(examConfig.level)}</span>
+      `;
+      button.addEventListener("click", () => handleExamSelection(examConfig.id));
+      groupGrid.appendChild(button);
+    });
+
+    groupElement.appendChild(groupGrid);
+    elements.examGrid.appendChild(groupElement);
   });
 }
 
@@ -651,7 +796,7 @@ function showHome() {
 
   if (!state.selectedExamId) {
     elements.homeEyebrow.textContent = "Practice Tests";
-    elements.homeTitle.textContent = "Choose Test";
+    elements.homeTitle.textContent = "Choose Exam";
     elements.homeLead.textContent = "Choose an exam to start practicing.";
     elements.examGrid.classList.remove("hidden");
     elements.examPracticeArea.classList.add("hidden");
@@ -761,6 +906,15 @@ function createTestFromMode(modeId) {
       };
     })
     .filter((section) => section.questions.length > 0);
+
+  const selectedQuestionCount = sections.reduce((total, section) => total + section.questions.length, 0);
+
+  if (getRequestedQuestionCount(mode) > 0 && selectedQuestionCount === 0) {
+    return {
+      mode,
+      blockedMessage: mode.emptyBankMessage || examConfig.emptyBankMessage || `${examConfig.shortTitle} question bank does not have questions available yet.`
+    };
+  }
 
   if (usedRecentlySeenQuestions) {
     warnings.push("Not enough fresh questions are available, so some older questions may appear again.");
@@ -1451,6 +1605,63 @@ function generateStudyRecommendations(sectionMistakes, weakTags, examConfig = ge
     if (weakSections.length > 0) {
       addRecommendation("Review the explanations for each missed HSK 4 question before retaking the same weak area.");
       addRecommendation("Try the HSK 4 practice mode for your weakest section, then take the mini test again.");
+    }
+
+    return recommendations.slice(0, 6);
+  }
+
+  if (examConfig.exam === "JLPT" && examConfig.level === "N4") {
+    if (weakTagText.includes("particle")) {
+      addRecommendation("You should review N4-level particles and sentence patterns.");
+    }
+
+    if (weakTagText.includes("kanji")) {
+      addRecommendation("You should review common N4 kanji readings and vocabulary.");
+    }
+
+    if (weakTagText.includes("verb form") || weakTagText.includes("verb") || weakTagText.includes("potential")) {
+      addRecommendation("You should review verb forms such as plain form, te-form, nai-form, ta-form, and potential form.");
+    }
+
+    if (weakTagText.includes("plain form") || weakTagText.includes("te-form") || weakTagText.includes("nai-form") || weakTagText.includes("ta-form")) {
+      addRecommendation("You should practice choosing the correct plain, te-, nai-, and ta-form before N4 grammar patterns.");
+    }
+
+    if (weakTagText.includes("obligation") || weakTagText.includes("permission") || weakTagText.includes("prohibition")) {
+      addRecommendation("You should review N4 rules for must do, may do, and must not do expressions.");
+    }
+
+    if (weakTagText.includes("purpose") || weakTagText.includes("reason") || weakTagText.includes("condition") || weakTagText.includes("sequence")) {
+      addRecommendation("You should review N4 connectors for purpose, reason, condition, and action order.");
+    }
+
+    if (weakTagText.includes("grammar")) {
+      addRecommendation("You should review N4 grammar patterns and sentence endings.");
+    }
+
+    if (weakTagText.includes("reading")) {
+      addRecommendation("You should practice short N4 reading passages and focus on main idea, details, time, place, and reason.");
+    }
+
+    if (weakTagText.includes("listening")) {
+      addRecommendation("You should practice short Japanese conversations and focus on keywords such as time, place, action, and intention.");
+    }
+
+    weakSections.forEach((section) => {
+      if (section.id === "reading") {
+        addRecommendation("You should practice N4 reading questions and mark who, when, where, why, and what happened.");
+      } else if (section.id === "listening") {
+        addRecommendation("You should practice listening-style scripts and focus on the speaker's action, reason, and intention.");
+      } else if (section.id === "vocabulary") {
+        addRecommendation("You should review N4 vocabulary by topic and pay attention to kanji readings.");
+      } else if (section.id === "grammar") {
+        addRecommendation("You should review N4 sentence patterns, particles, and verb forms with short example sentences.");
+      }
+    });
+
+    if (weakSections.length > 0) {
+      addRecommendation("Review the explanations for each missed N4 question before retaking the same weak area.");
+      addRecommendation("Try the JLPT N4 practice mode for your weakest section, then take the mini test again.");
     }
 
     return recommendations.slice(0, 6);
